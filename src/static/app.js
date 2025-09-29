@@ -35,8 +35,6 @@ document.addEventListener("DOMContentLoaded", () => {
                   .join("")}
               </ul>
             </div>`
-            : `<p><em>No participants yet</em></p>`;
-
         activityCard.innerHTML = `
           <h4>${name}</h4>
           <p>${details.description}</p>
@@ -45,21 +43,30 @@ document.addEventListener("DOMContentLoaded", () => {
           <div class="participants-container">
             ${participantsHTML}
           </div>
+          <form class="activity-signup-form">
+            <input type="email" class="signup-email" required placeholder="your-email@mergington.edu" />
+            <button type="submit">Register Student</button>
+          </form>
         `;
 
         activitiesList.appendChild(activityCard);
-
-        // Add option to select dropdown
-        const option = document.createElement("option");
-        option.value = name;
-        option.textContent = name;
-        activitySelect.appendChild(option);
+      });
       });
 
       // Add event listeners to delete buttons
       document.querySelectorAll(".delete-btn").forEach((button) => {
         button.addEventListener("click", handleUnregister);
       });
+        // Add event listeners to signup forms
+        document.querySelectorAll(".activity-signup-form").forEach((form, idx) => {
+          form.addEventListener("submit", function(event) {
+            event.preventDefault();
+            const emailInput = form.querySelector(".signup-email");
+            const email = emailInput.value;
+            const activity = Object.keys(activities)[idx];
+            handleSignup(email, activity);
+          });
+        });
     } catch (error) {
       activitiesList.innerHTML =
         "<p>Failed to load activities. Please try again later.</p>";
@@ -81,6 +88,12 @@ document.addEventListener("DOMContentLoaded", () => {
         {
           method: "DELETE",
         }
+      }
+    }
+  }
+  // Initialize app
+  fetchActivities();
+});
       );
 
       const result = await response.json();
@@ -97,6 +110,21 @@ document.addEventListener("DOMContentLoaded", () => {
       }
 
       messageDiv.classList.remove("hidden");
+      const result = await response.json();
+
+      if (response.ok) {
+        messageDiv.textContent = result.message;
+        messageDiv.className = "success";
+        fetchActivities();
+      } else {
+        messageDiv.textContent = result.detail || "An error occurred";
+        messageDiv.className = "error";
+      }
+
+      messageDiv.classList.remove("hidden");
+      setTimeout(() => {
+        messageDiv.classList.add("hidden");
+      }, 5000);
 
       // Hide message after 5 seconds
       setTimeout(() => {
@@ -137,24 +165,37 @@ document.addEventListener("DOMContentLoaded", () => {
         // Refresh activities list to show updated participants
         fetchActivities();
       } else {
-        messageDiv.textContent = result.detail || "An error occurred";
-        messageDiv.className = "error";
-      }
+          // Handle signup for each activity
+          async function handleSignup(email, activity) {
+            try {
+              const response = await fetch("/activities/" + encodeURIComponent(activity) + "/register", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({ email }),
+              });
 
-      messageDiv.classList.remove("hidden");
+              const result = await response.json();
 
-      // Hide message after 5 seconds
-      setTimeout(() => {
-        messageDiv.classList.add("hidden");
-      }, 5000);
-    } catch (error) {
-      messageDiv.textContent = "Failed to sign up. Please try again.";
-      messageDiv.className = "error";
-      messageDiv.classList.remove("hidden");
-      console.error("Error signing up:", error);
-    }
-  });
+              if (response.ok) {
+                messageDiv.textContent = result.message;
+                messageDiv.className = "success";
+                fetchActivities();
+              } else {
+                messageDiv.textContent = result.detail || "An error occurred";
+                messageDiv.className = "error";
+              }
 
-  // Initialize app
-  fetchActivities();
-});
+              messageDiv.classList.remove("hidden");
+              setTimeout(() => {
+                messageDiv.classList.add("hidden");
+              }, 5000);
+            } catch (error) {
+              messageDiv.textContent = "Failed to sign up. Please try again.";
+              messageDiv.className = "error";
+              messageDiv.classList.remove("hidden");
+              console.error("Error signing up:", error);
+            }
+          }
+        }
